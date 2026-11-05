@@ -1,0 +1,36 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+const on = (channel) => (listener) => ipcRenderer.on(channel, (_e, payload) => listener(payload));
+
+contextBridge.exposeInMainWorld('widget', {
+  init: () => ipcRenderer.invoke('init'),
+  act: (name, ...args) => ipcRenderer.invoke('ym:act', name, args),
+  lookupLyrics: (track) => ipcRenderer.invoke('lyrics:lookup', track),
+  relaunchYM: () => ipcRenderer.invoke('ym:relaunch'),
+  launchYM: () => ipcRenderer.invoke('ym:launch'),
+  focusYM: () => ipcRenderer.invoke('ym:focus'),
+  setLayout: (mode, panel) => ipcRenderer.send('ui:layout', { mode, panel }),
+  setPinned: (pinned) => ipcRenderer.send('ui:pin', pinned),
+  setGlow: (enabled) => ipcRenderer.send('ui:glow', enabled),
+  setGlowLevel: (value) => ipcRenderer.send('ui:glow-level', value),
+  thumbOverflow: (data) => ipcRenderer.send('ui:thumb-overflow', data),
+  popOpen: (data) => ipcRenderer.send('ui:pop-open', data),
+  popLeave: () => ipcRenderer.send('ui:pop-leave'),
+  popValue: (data) => ipcRenderer.send('ui:pop-value', data),
+  onPopSet: on('ui:pop-set'),
+  onPopping: on('ui:popping'),
+  dragStart: (screenX, screenY) => ipcRenderer.send('drag:start', { screenX, screenY }),
+  dragMove: (screenX, screenY) => ipcRenderer.send('drag:move', { screenX, screenY }),
+  dragEnd: () => ipcRenderer.send('drag:end'),
+  resizeStart: (edge, screenX, screenY) => ipcRenderer.send('resize:start', { edge, screenX, screenY }),
+  resizeMove: (screenX, screenY) => ipcRenderer.send('resize:move', { screenX, screenY }),
+  resizeEnd: () => ipcRenderer.send('resize:end'),
+  onState: on('ym:state'),
+  onPosition: on('ym:position'),
+  onStatus: on('ym:status'),
+  onLayout: on('ui:layout'),
+  onPinned: on('ui:pinned'),
+  onGlow: on('ui:glow'),
+  onVideoCovers: on('ui:video-covers'),
+  onShown: on('ui:shown'),
+});

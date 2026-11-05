@@ -1,0 +1,84 @@
+{
+  "name": "yandex-music-widget",
+  "productName": "Yandex Music Widget",
+  "version": "1.0.0",
+  "description": "Виджет плеера для Яндекс Музыки на Windows 11",
+  "author": "Oleg Poletsky",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/dobriy-vecher-vlad/yandex-music-widget",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dobriy-vecher-vlad/yandex-music-widget.git"
+  },
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "icon": "electron build/make-icon.js",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "io.github.dobriy-vecher-vlad.yandex-music-widget",
+    "productName": "Yandex Music Widget",
+    "copyright": "© 2026 Oleg Poletsky",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "executableName": "yandex-music-widget",
+      "artifactName": "yandex-music-widget-setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "ru_RU"
+      ],
+      "language": "1049",
+      "include": "build/installer.nsh",
+      "shortcutName": "Yandex Music Widget",
+      "uninstallDisplayName": "Yandex Music Widget",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "electronLanguages": [
+      "ru",
+      "en-US"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "dobriy-vecher-vlad",
+        "repo": "yandex-music-widget",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "koffi": "^3.3.6"
+  }
+}

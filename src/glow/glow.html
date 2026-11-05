@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">
+  <title>Свечение</title>
+  <link rel="stylesheet" href="glow.css">
+</head>
+<body>
+  <!-- тень виджета: у самого окна виджета системной тени нет (оно прозрачное) -->
+  <div class="shadow"></div>
+  <!-- .stage совпадает с границами виджета, ореол расходится от неё наружу -->
+  <div class="halo" id="halo">
+    <div class="stage">
+      <i class="blob b1"></i>
+      <i class="blob b2"></i>
+      <i class="blob b3"></i>
+      <i class="blob b4"></i>
+      <i class="blob b5"></i>
+      <i class="rim"></i>
+    </div>
+  </div>
+  <!-- часть круга таймлайна полосы, выходящая за нижний край виджета -->
+  <i class="overflow-thumb" id="thumb"></i>
+  <script src="glow.js"></script>
+</body>
+</html>

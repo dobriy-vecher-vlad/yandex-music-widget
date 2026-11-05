@@ -1,0 +1,66 @@
+/* Вертикальный слайдер громкости и яркости ореола — значения из ChangeVolume_* приложения:
+   плашка 2.75 × 13.5 rem с фоном поповера и обводкой, полоса 0.5 rem, круг 1 rem.
+   Полоса серая (--ym-slider-color-primary-disabled, дорожка слайдеров приложения), заполненная часть
+   белая (ChangeVolume_slider:before), при наведении — жёлтая и с кругом. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: transparent; user-select: none; }
+
+.plate {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.75rem;
+  height: 13.5rem;
+  padding: var(--ym-spacer-size-m) 0;
+  display: flex;
+  justify-content: center;
+  border: .0625rem solid var(--ym-controls-color-secondary-outline-enabled_stroke);
+  border-radius: var(--ym-radius-size-xxl);
+  background-color: var(--ym-background-color-primary-enabled-popover);
+  box-shadow: 0 4px 16px var(--ym-shadow-menu);
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + var(--from, 6px))) scale(.97);
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(.65, 0, .35, 1);
+}
+body.is-down .plate { --from: -6px; }
+body.is-open .plate {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  transition: opacity 220ms ease, transform 320ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.level { position: relative; width: 1rem; height: 100%; display: flex; justify-content: center; cursor: pointer; }
+.track {
+  position: relative;
+  width: .5rem;
+  height: 100%;
+  border-radius: .25rem; /* полкруга по толщине: токен round задан в процентах и заостряет длинную полосу */
+  background: var(--ym-slider-color-primary-disabled);
+  overflow: visible;
+}
+.fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  border-radius: .25rem;
+  background: var(--ym-controls-color-secondary-on_outline-enabled);
+  transition: background-color var(--ym-duration-transition);
+}
+.thumb {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--ym-radius-size-round);
+  background: var(--ym-controls-color-primary-default-enabled);
+  transform: translate(-50%, 50%) scale(0);
+  transition: transform .15s;
+}
+/* как в приложении: при наведении заливка становится акцентной и появляется круг */
+.plate:hover .fill, body.is-dragging .fill { background: var(--ym-controls-color-primary-default-enabled); }
+.plate:hover .thumb, body.is-dragging .thumb { transform: translate(-50%, 50%) scale(1); }
+/* ореол выключен: слайдер приглушён, но работает — сдвиг включает свечение */
+body.is-off .fill, body.is-off .thumb { background: var(--ym-controls-color-secondary-text-enabled) !important; }

@@ -1,0 +1,651 @@
+/* Все цвета, размеры и шрифты — токены --ym-* из установленной Яндекс Музыки (ymw://tokens). */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  background: transparent; /* окно прозрачное: форму карточки задаёт #app */
+  font-family: var(--ym-font-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; border: none; background: none; color: inherit; }
+svg { display: block; width: var(--ym-icon-size-xs); height: var(--ym-icon-size-xs); flex-shrink: 0; }
+svg.i20 { width: var(--ym-icon-size-xxs); height: var(--ym-icon-size-xxs); }
+.grow { flex: 1; }
+.btn-flip svg { transform: rotate(180deg); }
+
+#app {
+  /* Фон как у плеер-бара: тон и насыщенность обложки, светлота 20% */
+  --player-bg: var(--player-average-color-background, var(--ym-background-color-primary-enabled-player));
+  --art: 100vw;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  /* скругление и обводка как у плеер-бара приложения (PlayerBarDesktopWithBackgroundProgressBar_player) */
+  border-radius: var(--ym-radius-size-l);
+  background-color: var(--player-bg);
+  transition: background-color var(--ym-duration-transition);
+  color: var(--ym-controls-color-secondary-text-enabled_variant);
+}
+#app::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border: .0625rem solid var(--ym-outline-color-primary-disabled);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.view { display: none; }
+#app[data-mode="art"] .view-art { display: flex; }
+#app[data-mode="bar"] .view-bar { display: grid; }
+#app:not([data-status="ready"]) .view { display: none; }
+
+/* ---------- кнопки ---------- */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: var(--ym-radius-size-round);
+  color: var(--ym-controls-color-secondary-text-enabled);
+  transition: color var(--ym-duration-transition), transform var(--ym-duration-transition), opacity var(--ym-duration-transition);
+}
+.btn:hover { color: var(--ym-controls-color-secondary-text-hovered); }
+.btn:disabled { color: var(--ym-controls-color-secondary-text-disabled); cursor: default; }
+.btn.is-active { color: var(--ym-controls-color-secondary-text-enabled_variant); }
+.btn-s { width: 32px; height: 32px; }
+.btn-s svg { width: var(--ym-icon-size-xxs); height: var(--ym-icon-size-xxs); }
+.btn-m { width: 44px; height: 44px; }
+.btn-sonata { width: 44px; height: 44px; }
+.btn-sonata:hover:not(:disabled), .btn-play:hover { transform: scale(1.05); }
+.btn-play { width: 40px; height: 40px; color: var(--ym-controls-color-primary-default-enabled); }
+.btn-play:hover { color: var(--ym-controls-color-primary-default-hovered); }
+.btn-play svg { width: 40px; height: 40px; }
+/* трек грузится: по краю жёлтого круга бежит тёмная дуга. С задержкой — короткая докачка посреди трека не мигает */
+.btn-play::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: var(--ym-radius-size-round);
+  border: 2px solid transparent;
+  border-top-color: rgb(0 0 0 / .55);
+  opacity: 0;
+  pointer-events: none;
+  animation: play-spin .8s linear infinite paused;
+  transition: opacity .2s;
+}
+#app.is-loading .btn-play::after { opacity: 1; transition-delay: .3s; animation-play-state: running; }
+@keyframes play-spin { to { rotate: 360deg; } }
+
+/* волна при нажатии, как в приложении */
+.btn .ripple {
+  position: absolute;
+  border-radius: var(--ym-radius-size-round);
+  background-color: var(--ym-controls-color-secondary-outline-pressed);
+  transform: scale(0);
+  animation: ripple .6s linear;
+  pointer-events: none;
+}
+.btn-play .ripple { background-color: var(--ym-controls-color-primary-default-pressed); }
+@keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+/* ---------- текст ---------- */
+.meta { min-width: 0; }
+.title, .artists {
+  font-size: var(--ym-font-size-label-m);
+  line-height: var(--ym-font-line-height-label-m);
+  font-weight: var(--ym-font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.title { color: var(--ym-controls-color-secondary-text-enabled_variant); }
+/* бегущая строка (setRunText в renderer.js): пауза, прокрутка до конца текста, пауза и обратно */
+.title.is-running, .artists.is-running {
+  text-overflow: clip;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 12px), transparent);
+}
+.is-running .run { display: inline-block; animation: run-text var(--dur) ease-in-out .4s infinite alternate; }
+@keyframes run-text {
+  0%, 20% { transform: translateX(0); }
+  80%, 100% { transform: translateX(var(--shift)); }
+}
+.artists { color: var(--ym-controls-color-secondary-text-enabled); }
+
+/* ---------- таймлайн ---------- */
+.timeline { height: 12px; display: flex; align-items: center; cursor: pointer; }
+.timeline-track {
+  position: relative;
+  width: 100%;
+  height: .25rem;
+  border-radius: var(--ym-radius-size-m);
+  background: var(--ym-slider-color-primary-progress);
+}
+.timeline-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: var(--ym-radius-size-m);
+  background: var(--ym-slider-color-primary-enabled);
+}
+.timeline-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: var(--ym-radius-size-round);
+  background: var(--ym-slider-color-primary-enabled);
+  box-shadow: 0 0 0 4px var(--player-bg);
+  transform: translateY(-50%) scale(0);
+  transition: transform .15s;
+}
+.timeline:hover .timeline-thumb, .timeline.is-seeking .timeline-thumb { transform: translateY(-50%) scale(1); }
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: var(--ym-font-size-label-xs);
+  line-height: 1rem;
+  font-weight: var(--ym-font-weight-medium);
+  color: var(--ym-controls-color-secondary-text-enabled);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- режим «обложка» ---------- */
+.view-art { flex-direction: column; height: 100%; }
+
+.art {
+  position: relative;
+  width: var(--art);
+  height: var(--art);
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--ym-background-color-secondary-enabled-blur);
+}
+.art-cover { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .8s cubic-bezier(.22, 1, .36, 1), filter .48s cubic-bezier(.22, 1, .36, 1); }
+.art:hover .art-cover, #app.is-popping .art-cover { transform: scale(1.04); filter: brightness(.9); }
+/* Видеообложка — вертикальное видео 9:16; в квадрате видна его середина. Проявляется поверх картинки,
+   когда видео пошло, и реагирует на наведение так же, как картинка. */
+.art-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .6s ease, transform .8s cubic-bezier(.22, 1, .36, 1), filter .48s cubic-bezier(.22, 1, .36, 1);
+}
+.art-video.is-ready { opacity: 1; }
+.art:hover .art-video, #app.is-popping .art-video { transform: scale(1.04); filter: brightness(.9); }
+
+/* Без наведения видны название, исполнитель, лайк и линия прогресса у нижнего края.
+   При наведении появляется верхняя панель, а снизу выезжают таймлайн и кнопки.
+   Появление — длиннее и с мягким замедлением в конце, скрытие — короче. */
+.view-art {
+  --hover-in: 480ms;
+  --hover-out: 320ms;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+}
+
+.art-progress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: var(--ym-slider-color-primary-progress);
+  transition: opacity var(--hover-out) var(--ease-in-out);
+  z-index: 1;
+}
+.art-progress i { display: block; height: 100%; width: 0; background: var(--ym-slider-color-primary-enabled); }
+.art:hover .art-progress, #app.is-dragging .art-progress, #app.is-popping .art-progress { opacity: 0; transition-duration: 200ms; }
+
+.art-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* Снизу 8 px, а не 16: у кнопок 44 px иконка стоит с внутренним полем 10 px, поэтому видимый отступ
+     сердечка и текста от низа получается как по бокам. Под кнопками управления — ещё 6 px (.art-more). */
+  padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-l) var(--ym-spacer-size-xs);
+}
+/* два слоя затемнения: короткий снизу (покой) и полный (наведение); градиенты не анимируются, анимируем непрозрачность слоёв */
+.art-overlay::before, .art-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity var(--hover-out) var(--ease-in-out);
+}
+.art-overlay::before {
+  background: linear-gradient(0deg, var(--player-bg) 0%, color-mix(in srgb, var(--player-bg) 70%, transparent) 18%, transparent 38%);
+}
+.art-overlay::after {
+  background:
+    linear-gradient(180deg, var(--ym-shadow-xl) 0%, transparent 22%),
+    linear-gradient(0deg, var(--player-bg) 0%, color-mix(in srgb, var(--player-bg) 88%, transparent) 30%, transparent 62%);
+  opacity: 0;
+}
+.art:hover .art-overlay::before, #app.is-dragging .art-overlay::before, #app.is-popping .art-overlay::before { opacity: 0; transition: opacity var(--hover-in) var(--ease-out); }
+.art:hover .art-overlay::after, #app.is-dragging .art-overlay::after, #app.is-popping .art-overlay::after { opacity: 1; transition: opacity var(--hover-in) var(--ease-out); }
+.art-overlay > * { position: relative; z-index: 1; }
+
+.art-top {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 calc(-1 * var(--ym-spacer-size-xs));
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--hover-out) var(--ease-in-out), transform var(--hover-out) var(--ease-in-out);
+}
+.art:hover .art-top, #app.is-dragging .art-top, #app.is-popping .art-top {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--hover-in) var(--ease-out) 60ms, transform var(--hover-in) var(--ease-out) 60ms;
+}
+
+.meta-row { display: flex; align-items: center; gap: var(--ym-spacer-size-xs); margin-right: -10px; }
+.meta-row .meta { flex: 1; }
+
+/* Выезжающая часть ничем не обрезается: в покое весь нижний блок (название + таймлайн + кнопки)
+   сдвинут вниз на высоту таймлайна и кнопок (--more-h считает renderer.js), так что они
+   оказываются за краем окна. При наведении блок поднимается, а таймлайн и кнопки проявляются «лесенкой». */
+.art-bottom {
+  transform: translateY(var(--more-h, 0px));
+  transition: transform var(--hover-out) var(--ease-in-out);
+  will-change: transform;
+}
+.art:hover .art-bottom, #app.is-dragging .art-bottom, #app.is-popping .art-bottom {
+  transform: none;
+  transition: transform var(--hover-in) var(--ease-out);
+}
+.art-more { padding-bottom: 6px; }
+.art-more > * {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.art:hover .art-more > *, #app.is-dragging .art-more > *, #app.is-popping .art-more > * {
+  opacity: 1;
+  transition: opacity 360ms ease var(--stagger, 60ms);
+}
+.art-more > .times { --stagger: 100ms; }
+.art-more > .controls { --stagger: 140ms; }
+.art-more .timeline { margin-top: var(--ym-spacer-size-xxxs); }
+.art-more .timeline-thumb { box-shadow: none; }
+.view-art .controls { display: flex; align-items: center; justify-content: space-between; margin: 0 -10px; }
+
+/* панель очереди / текста */
+.panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: .0625rem solid var(--ym-outline-color-primary-disabled);
+}
+.panel-head { display: flex; align-items: center; padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-xs) var(--ym-spacer-size-xxxs) var(--ym-spacer-size-m); }
+.tabs { display: flex; gap: var(--ym-spacer-size-xxxs); }
+.tab {
+  height: 32px;
+  padding: 0 var(--ym-spacer-size-m);
+  border-radius: var(--ym-radius-size-xxxl);
+  cursor: pointer;
+  font-size: var(--ym-font-size-label-m);
+  line-height: var(--ym-font-line-height-label-m);
+  font-weight: var(--ym-font-weight-medium);
+  color: var(--ym-controls-color-secondary-text-enabled);
+  transition: color var(--ym-duration-transition), background-color var(--ym-duration-transition);
+}
+.tab:hover { color: var(--ym-controls-color-secondary-text-hovered); }
+.tab.is-active {
+  color: var(--ym-controls-color-secondary-on_default-enabled);
+  background: var(--ym-controls-color-secondary-default-enabled);
+}
+.queue-tools { display: flex; }
+.queue-tools .btn-m { width: 36px; height: 36px; }
+#app[data-panel="lyrics"] .queue-tools { visibility: hidden; }
+
+.panel-body { position: relative; flex: 1; min-height: 0; }
+.queue, .lyrics {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 24px), transparent 100%);
+}
+#app[data-panel="queue"] .lyrics, #app[data-panel="lyrics"] .queue { display: none; }
+
+/* строки очереди — как TrackPlaylist в приложении */
+.queue { list-style: none; padding: var(--ym-spacer-size-xxxs) var(--ym-spacer-size-xs) var(--ym-spacer-size-xl); }
+.row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--ym-spacer-size-m);
+  height: 56px;
+  padding: 0 var(--ym-spacer-size-xs);
+  border-radius: var(--ym-radius-size-m);
+  cursor: pointer;
+  transition: background-color var(--ym-duration-transition);
+}
+.row:hover { background: var(--ym-surface-color-primary-enabled-list); }
+.row.is-past { opacity: .5; }
+.row-cover { position: relative; width: 40px; height: 40px; border-radius: var(--ym-radius-size-s); overflow: hidden; background: var(--ym-background-color-secondary-enabled-blur); }
+.row-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.row.is-current .row-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ym-surface-color-primary-enabled-entity);
+}
+.eq { position: absolute; inset: 0; display: none; align-items: flex-end; justify-content: center; gap: 2px; padding-bottom: 12px; z-index: 1; }
+.row.is-current .eq { display: flex; }
+.eq i { width: 3px; height: 14px; border-radius: 2px; background: var(--ym-controls-color-primary-default-enabled); transform-origin: bottom; animation: eq 0.9s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.3s; }
+.eq i:nth-child(3) { animation-delay: -.6s; }
+#app:not(.is-playing) .eq i { animation-play-state: paused; }
+@keyframes eq { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+.row .btn-like { width: 32px; height: 32px; opacity: 0; }
+.row:hover .btn-like, .row .btn-like.is-active { opacity: 1; }
+.row-time {
+  min-width: 36px;
+  text-align: right;
+  font-size: var(--ym-font-size-label-s);
+  font-weight: var(--ym-font-weight-medium);
+  color: var(--ym-controls-color-secondary-text-enabled);
+  font-variant-numeric: tabular-nums;
+}
+
+/* синхронный текст — значения из SyncLyrics*, SyncLyricsScroller*, SyncLyricsLine*, SyncLyricsLoader* приложения */
+.lyrics { overflow: hidden; mask-image: none; }
+.lyrics::before, .lyrics::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2.5rem;
+  z-index: 2;
+  pointer-events: none;
+}
+.lyrics::before { top: 0; background: linear-gradient(180deg, var(--player-bg) 0, hsla(0, 0%, 5%, 0) 100%); }
+.lyrics::after { bottom: 0; background: linear-gradient(1turn, var(--player-bg) 0, hsla(0, 0%, 5%, 0) 100%); }
+
+/* лента строк; Swiper сдвигает её transform-ом за 300 мс.
+   Без will-change: иначе лента постоянно живёт в отдельном слое, текст растрируется в исходном
+   размере и увеличенная в 1.2 раза активная строка выглядит размытой. */
+.lyrics-track {
+  padding: 2.5rem var(--ym-spacer-size-l) 100%;
+  transition: transform .3s ease;
+}
+.lyrics-track.is-instant { transition: none; }
+.lyrics-slide { margin-bottom: 32px; }
+
+.line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* уже спетые строки видны всегда, приглушённо — как следующие за ближайшей */
+  opacity: .1;
+  cursor: pointer;
+  transition: opacity .45s, transform .45s;
+}
+.line-text {
+  display: block;
+  max-width: 80%;
+  text-align: center;
+  font-family: var(--ym-font-heading);
+  font-size: max(var(--ym-font-size-headline-xs), 5vw);
+  font-weight: var(--ym-font-weight-bold);
+  letter-spacing: var(--ym-letter-spacing-m);
+  line-height: 1.25;
+  color: var(--ym-controls-color-secondary-on_default-hovered);
+}
+
+.lyrics[data-state="intro"] .line, .lyrics[data-state="prepare"] .line, .lyrics[data-state="outro"] .line.is-last { opacity: .1; }
+.lyrics[data-state="intro"] .lyrics-counter + .line, .lyrics[data-state="prepare"] .lyrics-counter + .line { opacity: .3; }
+.lyrics .line.is-active ~ .line { opacity: .1; }
+.lyrics .line.is-active + .line, .lyrics .line:has(+ .line.is-active) { opacity: .3; }
+/* любую строку можно нажать — перемотка к ней; под курсором строка проявляется */
+.lyrics .line:not(.is-active):hover { opacity: .6; }
+.lyrics .line.is-active { opacity: 1; transform: scale(1.2); }
+.lyrics.is-scrolled .line { opacity: 1; }
+
+/* заставка перед первой строкой и обратный отсчёт */
+.lyrics-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: max(var(--ym-spacer-size-xs), .62vw);
+  width: 100%;
+}
+.lyrics-counter:not(:empty) { height: max(calc(var(--ym-font-size-headline-xs) * 1.25), 6.25vw); }
+.lyrics-countdown { opacity: .5; }
+.lyrics-dot {
+  width: max(1rem, 3.2vw);
+  height: max(1rem, 3.2vw);
+  border-radius: var(--ym-radius-size-round);
+  background-color: var(--ym-controls-color-secondary-on_default-hovered);
+  opacity: .1;
+  transform: scale(1) translateY(50%);
+  animation: lyrics-pulse 1.1s linear infinite alternate, lyrics-opacity 1.1s linear infinite alternate;
+}
+#app:not(.is-playing) .lyrics-dot { animation-play-state: paused; }
+@keyframes lyrics-opacity { 0% { opacity: .1; } to { opacity: .5; } }
+@keyframes lyrics-pulse {
+  0% { transform: scale(1) translateY(50%); }
+  50% { transform: scale(1.3) translateY(0); }
+  to { transform: scale(1) translateY(-50%); }
+}
+
+.lyrics-footer {
+  text-align: center;
+  font-size: var(--ym-font-size-label-s);
+  line-height: var(--ym-font-line-height-label-s);
+  font-weight: var(--ym-font-weight-medium);
+  color: var(--ym-controls-color-secondary-text-enabled);
+}
+.lyrics:not([data-state="outro"]):not(.is-scrolled):not(.is-plain) .lyrics-footer { opacity: 0; transition: opacity .45s; }
+
+/* текст без синхронизации — обычная прокручиваемая колонка */
+.lyrics.is-plain { overflow-y: auto; scrollbar-width: none; }
+.lyrics.is-plain .lyrics-track { padding-bottom: 2.5rem; }
+.lyrics.is-plain .line { opacity: 1; }
+.lyrics.is-plain .lyrics-slide { margin-bottom: var(--ym-spacer-size-m); }
+.lyrics.is-plain .lyrics-counter { display: none; }
+
+.lyrics-note {
+  padding-top: var(--ym-spacer-size-xxl);
+  text-align: center;
+  font-size: var(--ym-font-size-label-m);
+  color: var(--ym-controls-color-secondary-text-enabled);
+}
+
+/* ---------- режим «полоса» ---------- */
+/* одна строка, по краям везде 10 px; таймлайн рисуется поверх нижнего отступа */
+.view-bar {
+  --track-progress: 0%;
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  grid-template-rows: 64px;
+  align-items: center;
+  column-gap: var(--ym-spacer-size-s);
+  padding: var(--ym-spacer-size-s);
+}
+/* ChangeTimecodeBackground_backgroundProgressbar: слой цвета слайдера с непрозрачностью .32, сдвинутый на прогресс */
+.bar-progress-bg { position: absolute; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; }
+.bar-progress-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--ym-slider-color-primary-progress);
+  opacity: .32;
+  transform: translate3d(calc(var(--track-progress) - 100%), 0, 0);
+}
+.bar-cover-wrap { position: relative; width: 64px; height: 64px; border-radius: var(--ym-radius-size-m); overflow: hidden; }
+.bar-cover { width: 64px; height: 64px; object-fit: cover; display: block; background: var(--ym-background-color-secondary-enabled-blur); }
+/* FullscreenPlayerDesktopButton_root / _button из приложения */
+.cover-expand {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--ym-background-color-primary-enabled-header);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--ym-duration-transition);
+}
+.cover-expand:hover { opacity: 1; }
+.cover-expand-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ym-radius-size-round);
+  background-color: var(--ym-controls-color-secondary-card-enabled);
+  color: var(--ym-controls-color-secondary-text-enabled_variant);
+  backdrop-filter: saturate(180%) blur(.9375rem);
+  cursor: pointer;
+  transition: background-color var(--ym-duration-transition), transform var(--ym-duration-transition);
+}
+.cover-expand-btn:hover { background-color: var(--ym-controls-color-secondary-card-hovered); transform: scale(1.05); }
+.view-bar .controls { display: flex; align-items: center; margin-right: -4px; }
+/* все кнопки строки одной ширины, иконки — как у «нравится»; иначе восемь кнопок не помещаются рядом с названием */
+.view-bar .controls .btn-m, .view-bar .controls .btn-sonata { width: 36px; }
+.view-bar .controls .btn-m svg { width: var(--ym-icon-size-xs); height: var(--ym-icon-size-xs); }
+/* настройки (громкость, свечение, закрепление) отделены от кнопок воспроизведения */
+.view-bar .controls [data-pop="volume"] { margin-left: 12px; }
+/* Громкость, свечение и закрепление выезжают справа при наведении на полосу, раздвигая строку:
+   в покое у названия трека больше места. Ширина — промежуток 12 + три кнопки по 36. */
+.bar-extra {
+  display: flex;
+  align-items: center;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: width var(--hover-out, 320ms) cubic-bezier(.65, 0, .35, 1), opacity 200ms ease;
+}
+.view-bar:hover .bar-extra, #app.is-popping .bar-extra {
+  width: 120px;
+  opacity: 1;
+  pointer-events: auto;
+  transition: width 420ms cubic-bezier(.22, 1, .36, 1), opacity 300ms ease 80ms;
+}
+.bar-extra > * { flex-shrink: 0; }
+/* Линия 4 px всегда видна и прижата к нижнему краю окна во всю ширину; при наведении только желтеет и показывает круг.
+   Круг 12 px стоит по центру линии и на 4 px выходит за край окна — эту часть дорисовывает окно ореола
+   под виджетом (см. sendThumbOverflow в renderer.js), так что круг выглядит целым. */
+.bar-timeline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+}
+.bar-timeline .timeline-track {
+  height: 4px;
+  background: var(--ym-controls-color-secondary-default-hovered);
+  border-radius: 0;
+}
+.bar-timeline .timeline-fill { border-radius: 0; }
+.bar-timeline .timeline-thumb {
+  /* круг не заходит в скруглённые углы карточки */
+  left: clamp(var(--ym-radius-size-l), var(--track-progress), calc(100% - var(--ym-radius-size-l))) !important;
+  box-shadow: none;
+}
+
+/* ---------- кнопки-переключатели ---------- */
+[data-action="pin"].is-active, [data-action="glow"].is-active { color: var(--ym-controls-color-secondary-text-enabled_variant); }
+[data-action="dislike"].is-active { color: var(--ym-controls-color-secondary-text-enabled_variant); }
+
+/* ---------- экран состояния ---------- */
+/* Карточка всегда 320 × 168 (STATUS_SIZE в geometry.js), в любом режиме */
+.status {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ym-spacer-size-l);
+  padding: var(--ym-spacer-size-xxl);
+  text-align: center;
+}
+#app:not([data-status="ready"]) .status { display: flex; }
+.status-text {
+  font-size: var(--ym-font-size-label-m);
+  line-height: var(--ym-font-line-height-label-m);
+  font-weight: var(--ym-font-weight-medium);
+  color: var(--ym-controls-color-secondary-text-enabled);
+}
+.pill {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 var(--ym-spacer-size-xl);
+  border-radius: var(--ym-radius-size-xxxl);
+  cursor: pointer;
+  font-size: var(--ym-font-size-label-m);
+  font-weight: var(--ym-font-weight-medium);
+  background: var(--ym-controls-color-primary-default-enabled);
+  color: var(--ym-controls-color-primary-on_default-enabled);
+  transition: background-color var(--ym-duration-transition), transform var(--ym-duration-transition);
+}
+.pill:hover { background: var(--ym-controls-color-primary-default-hovered); transform: scale(1.03); }
+
+/* ---------- громкость (колесо мыши) ---------- */
+.volume-hud {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: var(--ym-spacer-size-xs);
+  width: 180px;
+  padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-m);
+  border-radius: var(--ym-radius-size-xxxl);
+  background: var(--ym-background-color-primary-enabled-menu);
+  backdrop-filter: saturate(180%) blur(.9375rem);
+  box-shadow: 0 4px 16px var(--ym-shadow-menu);
+  color: var(--ym-controls-color-secondary-text-enabled_variant);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.92);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+  z-index: 10;
+}
+#app[data-mode="art"] .volume-hud { top: calc(var(--art) / 2); }
+.volume-hud.is-visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.volume-track { flex: 1; height: .25rem; border-radius: var(--ym-radius-size-m); background: var(--ym-slider-color-primary-progress); overflow: hidden; }
+.volume-track i { display: block; height: 100%; background: var(--ym-slider-color-primary-enabled); }
+
+/* кнопки громкости и свечения: вертикальный слайдер открывается отдельным окном над кнопкой (src/popup) */
+.pop-ctl { position: relative; display: flex; }
+
+/* ---------- слайдеры при наведении: заливка и круг акцентным цветом, как в приложении ---------- */
+.timeline-fill, .timeline-thumb { transition: background-color var(--ym-duration-transition), transform .15s; }
+.timeline:hover .timeline-fill, .timeline.is-seeking .timeline-fill,
+.timeline:hover .timeline-thumb, .timeline.is-seeking .timeline-thumb {
+  background-color: var(--ym-controls-color-primary-default-enabled);
+}
+
+/* курсор растягивания у краёв окна поверх курсоров кнопок и ссылок */
+html.is-resize-zone, html.is-resize-zone * { cursor: var(--resize-cursor) !important; }
+
+/* экран состояния — нейтральный фон плеер-бара, без цвета последней обложки */
+#app:not([data-status="ready"]) { background-color: var(--ym-background-color-primary-enabled-player); }

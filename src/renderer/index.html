@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' ymw:; font-src ymw:; img-src https://avatars.yandex.net data:; media-src https://*.strm.yandex.ru https://*.strm.yandex.net; connect-src ymw:">
+  <title>Yandex Music Widget</title>
+  <link rel="stylesheet" href="ymw://tokens/tokens.css">
+  <link rel="stylesheet" href="ymw://ym/styles/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="ym-dark-theme ym-font-music">
+  <div id="sprite" hidden></div>
+  <!-- Лампочки в спрайте Яндекс Музыки нет — рисуем по его правилам: поле 20×20, линия 1.67, прямые концы,
+       пара «контур / заливка» как у pin_xxs / pin_filled_xxs -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="lamp_xxs" viewBox="0 0 20 20" fill="none">
+      <path d="M7.5 14V12.33A5 5 0 1 1 12.5 12.33V14Z" stroke="currentColor" stroke-width="1.667"/>
+      <path d="M7.5 17.08h5" stroke="currentColor" stroke-width="1.667"/>
+    </symbol>
+    <symbol id="lamp_filled_xxs" viewBox="0 0 20 20" fill="none">
+      <path d="M7.5 14V12.33A5 5 0 1 1 12.5 12.33V14Z" fill="currentColor" stroke="currentColor" stroke-width="1.667"/>
+      <path d="M7.5 17.08h5" stroke="currentColor" stroke-width="1.667"/>
+    </symbol>
+  </svg>
+
+  <div id="app" data-mode="art" data-status="connecting">
+
+    <!-- Режим «обложка»: квадрат с контролами при наведении + раскрывающаяся панель -->
+    <div class="view view-art">
+      <div class="art" data-drag>
+        <img class="art-cover" data-bind="cover" alt="" draggable="false">
+        <!-- видеообложка трека поверх картинки: появляется, когда видео пошло (syncVideo в renderer.js) -->
+        <video class="art-video" muted loop playsinline disablepictureinpicture preload="auto"></video>
+        <div class="art-progress"><i data-bind="progress"></i></div>
+
+        <div class="art-overlay">
+          <div class="art-top">
+            <button class="btn btn-s" data-action="pin" title="Поверх всех окон"><svg><use href="#pin_xxs"/></svg></button>
+            <div class="pop-ctl" data-pop="glow">
+              <button class="btn btn-s" data-action="glow" title="Свечение под музыку"><svg><use href="#lamp_filled_xxs"/></svg></button>
+            </div>
+            <div class="grow"></div>
+            <div class="pop-ctl" data-pop="volume">
+              <button class="btn btn-s" data-action="mute" title="Выключить звук"><svg><use href="#volume_xs"/></svg></button>
+            </div>
+            <button class="btn btn-s" data-action="to-bar" title="Компактный режим"><svg><use href="#arrowDown_xxs"/></svg></button>
+          </div>
+
+          <div class="art-bottom">
+            <div class="meta-row">
+              <div class="meta">
+                <div class="title" data-bind="title"></div>
+                <div class="artists" data-bind="artists"></div>
+              </div>
+              <button class="btn btn-m" data-action="dislike" title="Не нравится"><svg><use href="#dislike_xs"/></svg></button>
+              <button class="btn btn-m" data-action="like" title="Нравится"><svg><use href="#like_xs"/></svg></button>
+            </div>
+
+            <div class="art-more">
+            <div class="timeline" data-slider>
+              <div class="timeline-track"><i class="timeline-fill" data-bind="progress"></i><i class="timeline-thumb" data-bind="thumb"></i></div>
+            </div>
+            <div class="times"><span data-bind="pos">0:00</span><span data-bind="dur">0:00</span></div>
+
+            <div class="controls">
+              <button class="btn btn-m" data-action="panel-lyrics" title="Текст"><svg><use href="#syncLyrics_xs"/></svg></button>
+              <button class="btn btn-sonata" data-action="prev" title="Предыдущий"><svg class="i20"><use href="#previous_xxs"/></svg></button>
+              <button class="btn btn-play" data-action="toggle" title="Пауза / играть"><svg><use href="#play_filled_l"/></svg></button>
+              <button class="btn btn-sonata" data-action="next" title="Следующий"><svg class="i20"><use href="#next_xxs"/></svg></button>
+              <button class="btn btn-m" data-action="panel-queue" title="Очередь"><svg><use href="#playQueue_xs"/></svg></button>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head" data-drag>
+          <div class="tabs">
+            <button class="tab" data-action="tab-queue">Далее</button>
+            <button class="tab" data-action="tab-lyrics">Текст</button>
+          </div>
+          <div class="grow"></div>
+          <div class="queue-tools">
+            <button class="btn btn-m" data-action="shuffle" title="Перемешать"><svg><use href="#shuffle_xs"/></svg></button>
+            <button class="btn btn-m" data-action="repeat" title="Повтор"><svg><use href="#repeat_xs"/></svg></button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ol class="queue" id="queue"></ol>
+          <div class="lyrics" id="lyrics"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Режим «полоса»: как плеер-бар Яндекс Музыки -->
+    <div class="view view-bar" data-drag>
+      <!-- пройденная часть трека закрашивает карточку, как ChangeTimecodeBackground в приложении -->
+      <div class="bar-progress-bg" aria-hidden="true"></div>
+      <!-- как FullscreenPlayerDesktopButton в плеер-баре приложения -->
+      <div class="bar-cover-wrap">
+        <img class="bar-cover" data-bind="cover" alt="" draggable="false">
+        <div class="cover-expand" data-action="to-art" title="Развернуть">
+          <button class="cover-expand-btn" tabindex="-1"><svg><use href="#fullscreen_xs"/></svg></button>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="title" data-bind="title"></div>
+        <div class="artists" data-bind="artists"></div>
+      </div>
+      <!-- одна строка кнопок одного размера: «не нравится», воспроизведение, «нравится», а при наведении
+           выезжают громкость, свечение и закрепление; в большой режим — кнопкой на обложке;
+           вертикальные слайдеры открываются отдельным окном у кнопки (main/popup.js) -->
+      <div class="controls">
+        <button class="btn btn-m" data-action="dislike" title="Не нравится"><svg><use href="#dislike_xs"/></svg></button>
+        <button class="btn btn-sonata" data-action="prev" title="Предыдущий"><svg class="i20"><use href="#previous_xxs"/></svg></button>
+        <button class="btn btn-play" data-action="toggle" title="Пауза / играть"><svg><use href="#play_filled_l"/></svg></button>
+        <button class="btn btn-sonata" data-action="next" title="Следующий"><svg class="i20"><use href="#next_xxs"/></svg></button>
+        <button class="btn btn-m" data-action="like" title="Нравится"><svg><use href="#like_xs"/></svg></button>
+        <div class="bar-extra">
+          <div class="pop-ctl" data-pop="volume">
+            <button class="btn btn-m" data-action="mute" title="Выключить звук"><svg><use href="#volume_xs"/></svg></button>
+          </div>
+          <div class="pop-ctl" data-pop="glow">
+            <button class="btn btn-m" data-action="glow" title="Свечение под музыку"><svg><use href="#lamp_filled_xxs"/></svg></button>
+          </div>
+          <button class="btn btn-m" data-action="pin" title="Поверх всех окон"><svg><use href="#pin_xxs"/></svg></button>
+        </div>
+      </div>
+      <div class="timeline bar-timeline" data-slider>
+        <div class="timeline-track"><i class="timeline-fill" data-bind="progress"></i><i class="timeline-thumb" data-bind="thumb"></i></div>
+      </div>
+    </div>
+
+    <!-- Нет связи с приложением -->
+    <!-- Экран состояния: всегда одного размера (geometry.js → STATUS_SIZE) -->
+    <div class="status" data-drag>
+      <div class="status-text" id="status-text"></div>
+      <button class="pill" id="status-action" hidden></button>
+    </div>
+
+    <div class="volume-hud" id="volume-hud">
+      <svg><use href="#volume_xs"/></svg>
+      <div class="volume-track"><i id="volume-fill"></i></div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
